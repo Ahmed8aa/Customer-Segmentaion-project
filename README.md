@@ -2,9 +2,7 @@
 Optimizing Customer Segmentation and Rewards Programs for Enhanced Engagement in the Online Travel Industry
 Project Description:
 
-Project Title: Optimizing Customer Segmentation and Rewards Programs for Enhanced Engagement in the Online Travel Industry
-
-Subtitle: Leveraging Data Insights and Advanced Analytics Techniques for Personalized Travel Experiences
+Leveraging Data Insights and Advanced Analytics Techniques for Personalized Travel Experiences
 
 Description:
 
