@@ -1,0 +1,470 @@
+WITH H0 AS (
+  SELECT 
+    user_id 
+  FROM 
+    sessions 
+  WHERE 
+    session_start > '2023-01-04' 
+  GROUP BY 
+    user_id 
+  HAVING 
+    COUNT(*)> 7
+), 
+H1 AS(
+  SELECT 
+    user_id, 
+    SUM(flight_discount :: int) total_num_of_flight_discount, 
+    SUM(flight_booked :: int) total_flight_bookings, 
+    ROUND(
+      COALESCE(
+        AVG(flight_discount_amount), 
+        0
+      ), 
+      3
+    ) avg_flight_discount_amount, 
+    COALESCE(
+      PERCENTILE_CONT(0.5) WITHIN GROUP (
+        ORDER BY 
+          flight_discount_amount
+      ), 
+      0
+    ) AS median_flight_discount_amount, 
+    COALESCE(
+      MODE() WITHIN GROUP (
+        ORDER BY 
+          flight_discount_amount
+      ), 
+      0
+    ) AS mode_flight_discount_amount, 
+    ROUND(
+      COALESCE(
+        MAX(flight_discount_amount), 
+        0
+      ), 
+      3
+    ) as max_flight_discount_amount, 
+    ROUND(
+      COALESCE(
+        MIN(flight_discount_amount), 
+        0
+      ), 
+      3
+    ) AS min_flight_discount_amount 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND cancellation = FALSE 
+    AND flight_booked = TRUE 
+    AND session_start > '2023-01-04' 
+  GROUP BY 
+    1 
+  ORDER BY 
+    2 DESC
+), 
+H2 AS(
+  SELECT 
+    user_id, 
+    SUM(hotel_discount :: int) total_num_of_hotel_discount, 
+    SUM(hotel_booked :: int) total_hotel_bookings, 
+    ROUND(
+      COALESCE(
+        AVG(hotel_discount_amount), 
+        0
+      ), 
+      3
+    ) avg_hotel_discount_amount, 
+    COALESCE(
+      PERCENTILE_CONT(0.5) WITHIN GROUP (
+        ORDER BY 
+          hotel_discount_amount
+      ), 
+      0
+    ) AS median_hotel_discount_amount, 
+    COALESCE(
+      mode() WITHIN GROUP (
+        ORDER BY 
+          hotel_discount_amount
+      ), 
+      0
+    ) AS mode_hotel_discount_amount, 
+    ROUND(
+      COALESCE(
+        MAX(hotel_discount_amount), 
+        0
+      ), 
+      3
+    ) as max_hotel_discount_amount, 
+    ROUND(
+      COALESCE(
+        MIN(hotel_discount_amount), 
+        0
+      ), 
+      3
+    ) AS min_hotel_discount_amount 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND cancellation = FALSE 
+    AND hotel_booked = TRUE 
+    AND session_start > '2023-01-04' 
+  GROUP BY 
+    1 
+  ORDER BY 
+    2 DESC
+), 
+H3 AS(
+  SELECT 
+    user_id, 
+    SUM(flight_discount :: int) total_num_of_flight_discount_discarded, 
+    ROUND(
+      COALESCE(
+        AVG(flight_discount_amount), 
+        0
+      ), 
+      3
+    ) avg_flight_discount_amount_discarded 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND cancellation = FALSE 
+    AND flight_booked = FALSE 
+    AND session_start > '2023-01-04' 
+  GROUP BY 
+    1 
+  ORDER BY 
+    2 DESC
+), 
+H4 AS(
+  SELECT 
+    user_id, 
+    SUM(hotel_discount :: int) total_num_of_hotel_discount_discarded, 
+    ROUND(
+      COALESCE(
+        AVG(hotel_discount_amount), 
+        0
+      ), 
+      3
+    ) avg_hotel_discount_amount_discarded 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND cancellation = FALSE 
+    AND hotel_booked = FALSE 
+    AND session_start > '2023-01-04' 
+  GROUP BY 
+    1 
+  ORDER BY 
+    2 DESC
+), 
+H5 AS(
+  SELECT 
+    user_id, 
+    SUM(hotel_booked :: int) flight_discount_leads_to_hotel_booking 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND cancellation = FALSE 
+    AND flight_booked = FALSE 
+    AND flight_discount = TRUE 
+    AND hotel_discount = FALSE 
+    AND session_start > '2023-01-04' 
+  GROUP BY 
+    1 
+  ORDER BY 
+    2 DESC
+), 
+H6 AS(
+  SELECT 
+    user_id, 
+    SUM(flight_booked :: int) hotel_discount_leads_to_flight_booking 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND cancellation = FALSE 
+    AND hotel_booked = FALSE 
+    AND hotel_discount = TRUE 
+    AND flight_discount = FALSE 
+    AND session_start > '2023-01-04' 
+  GROUP BY 
+    1 
+  ORDER BY 
+    2 DESC
+), 
+H7 AS(
+  WITH T1 AS(
+    SELECT 
+      DISTINCT home_airport, 
+      home_airport_lat, 
+      home_airport_lon 
+    FROM 
+      users
+  ), 
+  T2 AS(
+    SELECT 
+      f.trip_id, 
+      f.destination_airport_lat, 
+      f.destination_airport_lon, 
+      T1.home_airport_lat, 
+      T1.home_airport_lon 
+    FROM 
+      T1 
+      JOIN flights f ON f.origin_airport = T1.home_airport
+  ), 
+  T3 AS (
+    SELECT 
+      trip_id, 
+      haversine_distance(
+        home_airport_lat, home_airport_lon, 
+        destination_airport_lat, destination_airport_lon
+      ) distance 
+    FROM 
+      T2
+  ) 
+  SELECT 
+    user_id, 
+    SUM(distance) total_travelled_miles 
+  FROM 
+    sessions s 
+    JOIN T3 ON s.trip_id = T3.trip_id 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND session_start > '2023-01-04' 
+    AND cancellation = FALSE 
+  GROUP BY 
+    1
+), 
+H8 AS(
+  SELECT 
+    user_id, 
+    SUM(
+      CASE WHEN flight_booked 
+      AND hotel_booked THEN 1 ELSE 0 END
+    ) AS flight_plus_hotels 
+  FROM 
+    sessions s 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND session_start > '2023-01-04' 
+    AND cancellation = FALSE 
+  GROUP BY 
+    1
+), 
+H9 AS(
+  SELECT 
+    user_id, 
+    home_country, 
+    home_city, 
+    home_airport 
+  FROM 
+    users 
+  WHERE 
+    user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    )
+), 
+H10 AS (
+  SELECT 
+    s.user_id, 
+    SUM(
+      CASE WHEN checked_bags > seats THEN 1 ELSE 0 END
+    ) AS flights_with_bags_morethan_seats, 
+    SUM(
+      CASE WHEN checked_bags > 1 THEN 1 ELSE 0 END
+    ) AS flights_with_morethan_onebag 
+  FROM 
+    flights f 
+    JOIN sessions s ON s.trip_id = f.trip_id 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND session_start > '2023-01-04' 
+    AND cancellation = FALSE 
+  GROUP BY 
+    1 
+  ORDER BY 
+    3 DESC
+), 
+H11 AS (
+  SELECT 
+    user_id, 
+    ROUND(
+      AVG(nights), 
+      2
+    ) average_nights 
+  FROM 
+    hotels h 
+    JOIN sessions s ON s.trip_id = h.trip_id 
+  WHERE 
+    s.user_id IN (
+      SELECT 
+        user_id 
+      FROM 
+        sessions 
+      WHERE 
+        session_start > '2023-01-04' 
+      GROUP BY 
+        user_id 
+      HAVING 
+        COUNT(*)> 7
+    ) 
+    AND session_start > '2023-01-04' 
+    AND cancellation = FALSE 
+  GROUP BY 
+    1
+) 
+SELECT 
+  H0.*, 
+  total_num_of_flight_discount, 
+  total_flight_bookings, 
+  avg_flight_discount_amount, 
+  median_flight_discount_amount, 
+  mode_flight_discount_amount, 
+  max_flight_discount_amount, 
+  min_flight_discount_amount, 
+  total_num_of_hotel_discount, 
+  total_hotel_bookings, 
+  avg_hotel_discount_amount, 
+  median_hotel_discount_amount, 
+  mode_hotel_discount_amount, 
+  max_hotel_discount_amount, 
+  min_hotel_discount_amount, 
+  total_num_of_flight_discount_discarded, 
+  avg_flight_discount_amount_discarded, 
+  total_num_of_hotel_discount_discarded, 
+  avg_hotel_discount_amount_discarded, 
+  flight_discount_leads_to_hotel_booking, 
+  hotel_discount_leads_to_flight_booking, 
+  total_travelled_miles, 
+  flight_plus_hotels, 
+  home_country, 
+  home_city, 
+  home_airport, 
+  flights_with_bags_morethan_seats, 
+  flights_with_morethan_onebag, 
+  average_nights 
+FROM 
+  H0 
+  LEFT JOIN H1 ON H0.user_id = H1.user_id 
+  LEFT JOIN H2 ON H0.user_id = H2.user_id 
+  LEFT JOIN H3 ON H0.user_id = H3.user_id 
+  LEFT JOIN H4 ON H0.user_id = H4.user_id 
+  LEFT JOIN H5 ON H0.user_id = H5.user_id 
+  LEFT JOIN H6 ON H0.user_id = H6.user_id 
+  LEFT JOIN H7 ON H0.user_id = H7.user_id 
+  LEFT JOIN H8 ON H0.user_id = H8.user_id 
+  LEFT JOIN H9 ON H0.user_id = H9.user_id 
+  LEFT JOIN H10 ON H0.user_id = H10.user_id 
+  LEFT JOIN H11 ON H0.user_id = H11.user_id
